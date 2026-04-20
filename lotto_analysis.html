@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로또 당첨번호 분석</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a12;
+    --surface: #13131f;
+    --card: #1a1a2e;
+    --border: #2a2a45;
+    --gold: #f5c842;
+    --gold2: #ffaa00;
+    --red: #ff4d6d;
+    --blue: #4da6ff;
+    --green: #4dffb4;
+    --purple: #b46dff;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* BG stars */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, #ffffff22 0%, transparent 100%),
+      radial-gradient(1px 1px at 80% 60%, #ffffff18 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 90%, #ffffff15 0%, transparent 100%),
+      radial-gradient(600px circle at 20% 30%, #f5c84210 0%, transparent 60%),
+      radial-gradient(400px circle at 80% 70%, #4da6ff08 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    margin-bottom: 56px;
+    animation: fadeDown 0.8s ease both;
+  }
+
+  .header-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #f5c84220, #ffaa0010);
+    border: 1px solid #f5c84240;
+    border-radius: 100px;
+    padding: 6px 18px;
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: clamp(32px, 6vw, 56px);
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #f5c842 0%, #ffaa00 50%, #ff7c42 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+    margin-bottom: 12px;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 300;
+    letter-spacing: 1px;
+  }
+
+  /* Section label */
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Top numbers */
+  .top-numbers-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 56px;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+
+  @media (max-width: 600px) {
+    .top-numbers-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .ball-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 20px 12px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s, border-color 0.3s;
+    cursor: default;
+  }
+
+  .ball-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--ball-color, var(--gold));
+    opacity: 0.7;
+  }
+
+  .ball-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--ball-color, var(--gold));
+  }
+
+  .position-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+
+  .lotto-ball {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 20px;
+    color: #fff;
+    position: relative;
+    box-shadow: 0 0 20px var(--ball-color, var(--gold)), 0 4px 16px #00000060;
+    background: radial-gradient(circle at 35% 35%, #fff3, transparent 60%),
+                var(--ball-color, var(--gold));
+  }
+
+  .ball-count {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  .ball-count span {
+    color: var(--ball-color, var(--gold));
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  /* Chart section */
+  .chart-section {
+    animation: fadeUp 0.8s 0.4s ease both;
+    margin-bottom: 40px;
+  }
+
+  .tab-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
+  .tab-btn {
+    padding: 8px 18px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  .tab-btn.active {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #0a0a12;
+    font-weight: 700;
+  }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 32px 24px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .chart-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold), var(--gold2), transparent);
+  }
+
+  .chart-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+
+  .chart-desc {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 28px;
+    font-weight: 300;
+  }
+
+  /* Bar chart */
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 200px;
+    position: relative;
+  }
+
+  .bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    gap: 4px;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .bar-wrap:hover .bar {
+    filter: brightness(1.3);
+  }
+
+  .bar-wrap:hover .tooltip {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+
+  .bar {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s;
+    position: relative;
+    min-height: 2px;
+  }
+
+  .bar.highlight {
+    box-shadow: 0 0 12px currentColor;
+  }
+
+  .bar-num {
+    font-size: 9px;
+    color: var(--muted);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) translateY(0);
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 5px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 10;
+    color: var(--text);
+  }
+
+  /* Summary stats */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 48px;
+    animation: fadeUp 0.8s 0.6s ease both;
+  }
+
+  @media (max-width: 500px) {
+    .stats-row { grid-template-columns: 1fr; }
+  }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 28px;
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-badge">1~1219회차 · 직전 회차 제외</div>
+    <h1>로또 번호 분석</h1>
+    <p class="subtitle">자리별 최다 출현 번호 및 전체 분포 시각화</p>
+  </header>
+
+  <!-- TOP NUMBERS -->
+  <div class="section-label">자리별 최다 출현 번호</div>
+  <div class="top-numbers-grid" id="topGrid"></div>
+
+  <!-- CHART -->
+  <div class="chart-section">
+    <div class="section-label">번호별 출현 횟수 분포</div>
+    <div class="tab-row" id="tabRow"></div>
+    <div class="chart-card">
+      <div class="chart-title" id="chartTitle"></div>
+      <div class="chart-desc" id="chartDesc"></div>
+      <div class="bar-chart" id="barChart"></div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-value">1,219</div>
+      <div class="stat-label">분석 회차</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">174회</div>
+      <div class="stat-label">최고 출현 (45번 · 6자리)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">1·45</div>
+      <div class="stat-label">양끝 자리 독주 번호</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const BALL_COLORS = ['#ff4d6d','#ff8c42','#f5c842','#4dffb4','#4da6ff','#b46dff'];
+const LABELS = ['1자리','2자리','3자리','4자리','5자리','6자리'];
+const KEYS   = ['번호1','번호2','번호3','번호4','번호5','번호6'];
+
+const TOP = {
+  "번호1": {"number":1,"count":168},
+  "번호2": {"number":7,"count":77},
+  "번호3": {"number":19,"count":68},
+  "번호4": {"number":27,"count":63},
+  "번호5": {"number":34,"count":83},
+  "번호6": {"number":45,"count":174}
+};
+
+const DIST = {
+  "번호1": {"1":168,"2":129,"3":131,"4":103,"5":97,"6":96,"7":79,"8":62,"9":41,"10":50,"11":39,"12":40,"13":34,"14":35,"15":15,"16":24,"17":20,"18":7,"19":12,"20":6,"21":10,"22":5,"23":4,"24":2,"25":1,"26":4,"27":1,"29":1,"30":2,"35":1},
+  "번호2": {"2":24,"3":37,"4":50,"5":50,"6":50,"7":77,"8":71,"9":64,"10":75,"11":71,"12":73,"13":58,"14":58,"15":59,"16":50,"17":48,"18":53,"19":34,"20":34,"21":32,"22":22,"23":25,"24":17,"25":18,"26":15,"27":17,"28":5,"29":5,"30":8,"31":6,"32":3,"33":4,"34":3,"36":2,"37":1},
+  "번호3": {"3":3,"4":6,"5":5,"6":14,"7":12,"8":19,"9":23,"10":34,"11":39,"12":47,"13":65,"14":50,"15":61,"16":51,"17":57,"18":66,"19":68,"20":65,"21":48,"22":50,"23":41,"24":51,"25":43,"26":42,"27":41,"28":41,"29":35,"30":35,"31":28,"32":14,"33":17,"34":14,"35":12,"36":7,"37":9,"38":3,"39":2,"40":1},
+  "번호4": {"5":1,"6":3,"8":4,"9":4,"10":1,"11":15,"12":14,"13":16,"14":26,"15":29,"16":36,"17":34,"18":34,"19":37,"20":40,"21":51,"22":39,"23":52,"24":57,"25":54,"26":61,"27":63,"28":44,"29":50,"30":60,"31":61,"32":52,"33":58,"34":44,"35":45,"36":35,"37":27,"38":26,"39":15,"40":15,"41":10,"42":4,"43":2},
+  "번호5": {"9":1,"10":1,"12":3,"13":2,"14":1,"15":3,"16":5,"17":9,"18":11,"19":13,"20":19,"21":21,"22":21,"23":21,"24":32,"25":28,"26":35,"27":47,"28":49,"29":51,"30":38,"31":51,"32":49,"33":67,"34":83,"35":59,"36":63,"37":75,"38":72,"39":78,"40":61,"41":55,"42":50,"43":32,"44":13},
+  "번호6": {"17":1,"18":1,"19":3,"20":4,"21":3,"22":4,"23":4,"24":5,"25":6,"26":7,"27":11,"28":14,"29":11,"30":13,"31":20,"32":24,"33":27,"34":37,"35":44,"36":55,"37":59,"38":68,"39":71,"40":95,"41":82,"42":100,"43":128,"44":148,"45":174}
+};
+
+// Build top number cards
+const topGrid = document.getElementById('topGrid');
+KEYS.forEach((key, i) => {
+  const {number, count} = TOP[key];
+  const color = BALL_COLORS[i];
+  const card = document.createElement('div');
+  card.className = 'ball-card';
+  card.style.setProperty('--ball-color', color);
+  card.innerHTML = `
+    <div class="position-label">${LABELS[i]}</div>
+    <div class="lotto-ball" style="--ball-color:${color}">${number}</div>
+    <div class="ball-count"><span>${count}</span>회</div>
+  `;
+  topGrid.appendChild(card);
+});
+
+// Animate ball cards in
+document.querySelectorAll('.ball-card').forEach((el, i) => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(20px)';
+  el.style.transition = `opacity 0.5s ${0.1 + i * 0.08}s, transform 0.5s ${0.1 + i * 0.08}s`;
+  setTimeout(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; }, 50);
+});
+
+// Build tabs
+const tabRow = document.getElementById('tabRow');
+let activeIdx = 0;
+
+KEYS.forEach((key, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+  btn.textContent = LABELS[i] + ' (최다: ' + TOP[key].number + '번)';
+  btn.style.setProperty('--tab-color', BALL_COLORS[i]);
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeIdx = i;
+    renderChart(i);
+  });
+  tabRow.appendChild(btn);
+});
+
+function renderChart(idx) {
+  const key = KEYS[idx];
+  const color = BALL_COLORS[idx];
+  const dist = DIST[key];
+  const topNum = TOP[key].number;
+
+  document.getElementById('chartTitle').textContent = `${LABELS[idx]} 번호별 출현 횟수`;
+  document.getElementById('chartDesc').textContent =
+    `${LABELS[idx]}에서 출현한 모든 번호의 횟수 분포 · 최다 출현: ${topNum}번 (${TOP[key].count}회)`;
+
+  const container = document.getElementById('barChart');
+  container.innerHTML = '';
+
+  const entries = Object.entries(dist).map(([k,v]) => [parseInt(k),v]);
+  const maxVal = Math.max(...entries.map(e => e[1]));
+
+  entries.forEach(([num, cnt]) => {
+    const pct = (cnt / maxVal) * 100;
+    const isTop = num === topNum;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'bar-wrap';
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip';
+    tooltip.textContent = `${num}번 · ${cnt}회`;
+    wrap.appendChild(tooltip);
+
+    const bar = document.createElement('div');
+    bar.className = 'bar' + (isTop ? ' highlight' : '');
+    bar.style.height = '0px';
+    bar.style.background = isTop
+      ? `linear-gradient(180deg, #fff 0%, ${color} 40%)`
+      : `linear-gradient(180deg, ${color}cc, ${color}55)`;
+    bar.style.color = color;
+    wrap.appendChild(bar);
+
+    const label = document.createElement('div');
+    label.className = 'bar-num';
+    label.textContent = num;
+    wrap.appendChild(label);
+
+    container.appendChild(wrap);
+
+    // Animate in
+    requestAnimationFrame(() => {
+      bar.style.transition = 'height 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+      bar.style.height = `${pct * 1.8}px`;
+    });
+  });
+}
+
+renderChart(0);
+</script>
+</body>
+</html>
